@@ -10,7 +10,7 @@
 //   "1234567890-abcdefg.apps.googleusercontent.com"
 
 var Auth = (function () {
-  var CLIENT_ID = "694311008078-76mtksod9bpslribsvdrh72dq0v3spu7.apps.googleusercontent.com";
+  var CLIENT_ID = "YOUR_CLIENT_ID_HERE.apps.googleusercontent.com";
   var SCOPE = "https://www.googleapis.com/auth/drive.appdata";
 
   var tokenClient = null;
@@ -49,14 +49,27 @@ var Auth = (function () {
         settle(null, err);
       }
     });
-    onChange(false); // signed-out until the user acts
+  }
+
+  // Attempt to restore the session silently after setup, so a page refresh
+  // doesn't drop the user to the sign-in screen. GIS returns a fresh token with
+  // no popup when there's an active Google session and a prior grant. If there
+  // isn't one (or the testing-mode grant has lapsed), it fails quietly and we
+  // show the sign-in button.
+  function start() {
+    setup();
+    ensureToken().then(function () {
+      /* restored; the token callback already fired onChange(true) */
+    }).catch(function () {
+      onChange(false);
+    });
   }
 
   function init(cb) {
     onChange = cb || function () {};
-    if (gisReady()) { setup(); return; }
+    if (gisReady()) { start(); return; }
     var poll = setInterval(function () {
-      if (gisReady()) { clearInterval(poll); setup(); }
+      if (gisReady()) { clearInterval(poll); start(); }
     }, 100);
   }
 

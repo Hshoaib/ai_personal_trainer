@@ -140,6 +140,14 @@ function renderSignedOut() {
     '</div></div>';
 }
 
+function renderConnecting() {
+  document.getElementById("app").innerHTML=
+    '<div class="wrap"><div class="landing">'+
+    '<div class="kicker">Training Log</div>'+
+    '<p class="intro" style="margin-top:20px">Connecting\u2026</p>'+
+    '</div></div>';
+}
+
 function renderError(msg) {
   document.getElementById("app").innerHTML=
     '<div class="wrap"><div class="landing">'+
@@ -612,7 +620,10 @@ function boot() {
   // Help modal backdrop
   document.getElementById("help-modal").addEventListener("click", function(e){ if(e.target===document.getElementById("help-modal")) closeHelp(); });
 
-  // Kick off auth (renders signed-out landing once GIS is ready)
+  // Show a brief connecting state, then try to restore the session silently.
+  // onAuthChange(true) loads the app; onAuthChange(false) shows the sign-in
+  // screen if there's no active session to restore.
+  renderConnecting();
   Auth.init(onAuthChange);
 }
 
