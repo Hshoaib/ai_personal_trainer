@@ -10,7 +10,7 @@
 //   "1234567890-abcdefg.apps.googleusercontent.com"
 
 var Auth = (function () {
-  var CLIENT_ID = "YOUR_CLIENT_ID_HERE.apps.googleusercontent.com";
+  var CLIENT_ID = "694311008078-76mtksod9bpslribsvdrh72dq0v3spu7.apps.googleusercontent.com.apps.googleusercontent.com";
   var SCOPE = "https://www.googleapis.com/auth/drive.appdata";
 
   var tokenClient = null;
