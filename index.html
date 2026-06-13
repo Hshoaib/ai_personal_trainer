@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Training Log</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap');
+    * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+    :root {
+      --bg:#14110D; --bg2:#1E1A14; --bg3:#272018;
+      --line:rgba(231,221,201,0.10); --ink:#EDE6D6;
+      --dim:#A1967F; --faint:#6E6555;
+      --run:#E8763C; --climb:#4FB8A0; --strength:#E0B23C;
+    }
+    body { min-height:100vh; background:var(--bg); color:var(--ink); font-family:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; padding-top:48px; padding-bottom:80px; background-image:radial-gradient(120% 60% at 100% 0%,rgba(232,118,60,0.07),transparent 55%); }
+    .wrap { max-width:560px; margin:0 auto; padding:0 18px; }
+    .hd { padding:12px 0 18px; }
+    .landing { padding:24px 0 40px; }
+    .kicker { font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:var(--dim); font-weight:600; }
+    .h1 { font-family:'Fraunces',Georgia,serif; font-size:34px; line-height:1.02; font-weight:600; margin:8px 0 0; letter-spacing:-.01em; }
+    .h1 em { font-style:italic; color:var(--run); }
+    .intro { color:var(--dim); font-size:14px; line-height:1.55; margin-top:14px; }
+    .prog { display:flex; gap:18px; align-items:baseline; margin:20px 0 4px; padding:14px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+    .prog b { font-family:'Fraunces',Georgia,serif; font-size:26px; font-weight:600; }
+    .prog span { color:var(--dim); font-size:12.5px; }
+    .c-run { color:var(--run); }
+    .legend { display:flex; gap:14px; flex-wrap:wrap; margin:14px 0 6px; font-size:12px; color:var(--dim); }
+    .legend i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+    .card { background:var(--bg2); border:1px solid var(--line); border-radius:16px; margin:12px 0; overflow:hidden; transition:border-color .2s,opacity .2s; }
+    .card.done { border-color:rgba(231,221,201,0.03); opacity:.7; }
+    .crow { display:flex; align-items:flex-start; gap:13px; padding:16px; }
+    .check { flex:0 0 auto; width:30px; height:30px; border-radius:50%; border:1.8px solid var(--faint); background:transparent; cursor:pointer; display:grid; place-items:center; margin-top:2px; transition:all .18s; color:var(--bg); }
+    .check svg { width:16px; height:16px; }
+    .cmid { flex:1 1 auto; min-width:0; }
+    .ctop { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .day { font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--dim); }
+    .tag { font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; padding:2px 7px; border-radius:20px; }
+    .tag.opt { color:var(--dim); border:1px solid var(--line); }
+    .ctitle { font-family:'Fraunces',Georgia,serif; font-size:18px; font-weight:500; margin:7px 0 2px; line-height:1.15; }
+    .dur { font-size:12.5px; color:var(--dim); }
+    .done-at { font-size:11.5px; color:var(--climb); margin-top:3px; min-height:1em; }
+    .exp { background:none; border:none; color:var(--dim); cursor:pointer; padding:8px; margin:-8px; display:grid; place-items:center; transition:transform .25s; flex-shrink:0; }
+    .exp.open { transform:rotate(180deg); }
+    .exp svg { width:20px; height:20px; }
+    .body { padding:0 16px 16px 59px; }
+    .rest-info { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--dim); background:var(--bg3); border-radius:8px; padding:8px 11px; margin-bottom:12px; }
+    .rest-info svg { width:13px; height:13px; flex-shrink:0; opacity:.7; }
+    /* Simple blocks (running / climbing) */
+    .blocks { list-style:none; display:flex; flex-direction:column; gap:6px; margin:0 0 12px; }
+    .blocks li.sli { font-size:13.5px; line-height:1.4; padding-left:15px; position:relative; }
+    .blocks li.sli::before { content:''; position:absolute; left:0; top:8px; width:5px; height:5px; border-radius:50%; background:currentColor; opacity:.45; }
+    /* Strength exercise rows */
+    .blocks li.eli { font-size:13.5px; line-height:1.4; margin-bottom:4px; }
+    .ex-row { display:flex; align-items:flex-start; gap:8px; }
+    .ex-check { flex-shrink:0; width:20px; height:20px; border-radius:4px; border:1.5px solid var(--faint); background:transparent; cursor:pointer; display:grid; place-items:center; transition:all .15s; color:var(--bg); margin-top:1px; }
+    .ex-check svg { width:12px; height:12px; }
+    .ex-text { flex:1; color:var(--ink); }
+    .ex-meta { display:flex; align-items:center; gap:8px; margin:5px 0 0 28px; }
+    .ex-weight { width:68px; background:var(--bg); border:1px solid var(--line); border-radius:8px; color:var(--ink); font-family:inherit; font-size:14px; padding:6px 8px; text-align:right; -moz-appearance:textfield; }
+    .ex-weight::-webkit-outer-spin-button,.ex-weight::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+    .ex-weight:focus { outline:none; border-color:var(--dim); }
+    .ex-weight::placeholder { color:var(--faint); font-style:italic; font-size:12.5px; }
+    .ex-weight-unit { font-size:12.5px; color:var(--dim); }
+    .ex-pen-btn { margin-left:auto; background:none; border:none; color:var(--faint); cursor:pointer; padding:4px; display:grid; place-items:center; transition:color .15s; flex-shrink:0; }
+    .ex-pen-btn svg { width:14px; height:14px; }
+    .ex-pen-btn.on { color:var(--run); }
+    .ex-note-wrap { margin:6px 0 4px 28px; }
+    .ex-note { width:100%; background:var(--bg); border:1px solid var(--line); border-radius:8px; color:var(--ink); font-family:inherit; font-size:13px; padding:8px 10px; resize:vertical; min-height:36px; }
+    .ex-note::placeholder { color:var(--faint); }
+    .ex-note:focus { outline:none; border-color:var(--dim); }
+    /* Help (per-exercise inline) */
+    .help-btn { flex-shrink:0; width:18px; height:18px; border-radius:50%; border:1px solid var(--faint); background:transparent; color:var(--dim); cursor:pointer; font-size:10px; font-weight:700; font-family:inherit; display:grid; place-items:center; transition:all .15s; margin-top:2px; }
+    .help-btn.on { background:var(--dim); color:var(--bg); border-color:var(--dim); }
+    .help-text { display:none; font-size:12.5px; line-height:1.55; color:var(--dim); background:var(--bg); border-radius:8px; padding:9px 11px; margin:6px 0 4px 28px; border:1px solid var(--line); }
+    /* Coach note */
+    .coach { font-size:13px; line-height:1.55; color:var(--dim); background:var(--bg3); border-radius:10px; padding:11px 13px; border-left:2px solid var(--faint); margin-bottom:14px; }
+    /* Session felt + note */
+    .felt { display:flex; gap:6px; margin:0 0 10px; }
+    .fbtn { flex:1; padding:9px 0 7px; border-radius:10px; border:1px solid var(--line); background:transparent; color:var(--dim); cursor:pointer; font-family:inherit; transition:all .15s; }
+    .fbtn b { display:block; font-family:'Fraunces',Georgia,serif; font-size:16px; font-weight:600; color:var(--ink); line-height:1.2; }
+    .fbtn small { font-size:9.5px; letter-spacing:.04em; text-transform:uppercase; }
+    .fbtn.on { background:var(--ink); border-color:var(--ink); }
+    .fbtn.on b,.fbtn.on small { color:var(--bg); }
+    textarea.note { width:100%; background:var(--bg); border:1px solid var(--line); border-radius:10px; color:var(--ink); font-family:inherit; font-size:13.5px; padding:10px 12px; resize:vertical; min-height:42px; }
+    textarea.note::placeholder { color:var(--faint); }
+    textarea.note:focus { outline:none; border-color:var(--dim); }
+    /* Page chrome */
+    .foot { text-align:center; color:var(--faint); font-size:12px; margin:16px 0 0; line-height:1.5; }
+    .sec-h { font-family:'Fraunces',Georgia,serif; font-size:22px; font-weight:600; margin:34px 0 4px; }
+    .lbl { font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--dim); font-weight:600; margin-top:16px; }
+    .chips { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0; }
+    .chip { padding:9px 15px; border-radius:30px; border:1px solid var(--line); background:transparent; color:var(--dim); cursor:pointer; font-family:inherit; font-size:13px; font-weight:600; transition:all .15s; }
+    .chip.on { background:var(--ink); color:var(--bg); border-color:var(--ink); }
+    .actions { display:flex; flex-direction:column; gap:10px; margin-top:30px; }
+    .btn { display:flex; align-items:center; justify-content:center; gap:9px; padding:15px; border-radius:13px; font-family:inherit; font-size:14.5px; font-weight:600; cursor:pointer; border:1px solid var(--line); transition:all .15s; width:100%; }
+    .btn.primary { background:var(--run); color:#1a1208; border-color:var(--run); }
+    .btn.primary:active { opacity:.85; }
+    .btn.load { background:transparent; color:var(--run); border-color:rgba(232,118,60,0.45); }
+    .btn.load:active { background:rgba(232,118,60,0.08); }
+    .btn.ghost { background:transparent; color:var(--ink); }
+    .btn.ghost:active { background:var(--bg2); }
+    .btn svg { width:17px; height:17px; flex-shrink:0; }
+    .btn-row { display:flex; gap:10px; }
+    .btn-row .btn { flex:1; }
+    /* Top bar */
+    #topbar { position:fixed; top:0; left:0; right:0; display:flex; align-items:center; gap:9px; padding:9px 16px; z-index:90; pointer-events:none; }
+    #topbar > * { pointer-events:auto; }
+    .sync-status { font-size:11.5px; color:var(--dim); margin-right:auto; padding-left:2px; min-height:1em; transition:color .2s; }
+    .sync-status.err { color:var(--run); }
+    .sync-status.ok { color:var(--climb); }
+    .tb-btn { background:var(--bg2); border:1px solid var(--line); color:var(--dim); border-radius:30px; padding:7px 13px; font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all .15s; }
+    .tb-btn:active { background:var(--bg3); }
+    .tb-help { width:32px; height:32px; padding:0; justify-content:center; border-radius:50%; font-size:14px; }
+    /* Toast */
+    .save-dot { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--bg); font-size:12.5px; font-weight:600; padding:8px 18px; border-radius:30px; opacity:0; transition:opacity .25s; pointer-events:none; white-space:nowrap; z-index:100; }
+    .save-dot.show { opacity:1; }
+    /* Modals */
+    .modal { position:fixed; inset:0; background:rgba(0,0,0,.75); display:none; place-items:center; padding:20px; z-index:200; }
+    .modal.open { display:grid; }
+    .modal-c { background:var(--bg2); border:1px solid var(--line); border-radius:16px; padding:20px; max-width:520px; width:100%; }
+    .modal-c .lbl { margin-top:0; margin-bottom:10px; }
+    .modal-c textarea { width:100%; min-height:200px; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:10px; padding:12px; font-size:12.5px; font-family:inherit; resize:vertical; }
+    .modal-c .btn { margin-top:12px; }
+    /* Help modal */
+    .modal-c.help { max-width:640px; max-height:88vh; overflow-y:auto; }
+    .help-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:4px; }
+    .help h3 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:22px; line-height:1.1; }
+    .help h4 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:15px; margin:18px 0 6px; color:var(--ink); }
+    .help p { font-size:13.5px; line-height:1.6; color:var(--dim); margin:8px 0; }
+    .help .step { color:var(--ink); font-weight:600; }
+    .help ol.loop { margin:10px 0 4px 18px; font-size:13.5px; line-height:1.55; color:var(--dim); }
+    .help ol.loop li { margin:5px 0; }
+    .help ol.loop b { color:var(--ink); }
+    .x-btn { flex-shrink:0; background:none; border:1px solid var(--line); color:var(--dim); border-radius:50%; width:28px; height:28px; font-size:16px; line-height:1; cursor:pointer; font-family:inherit; }
+    .prompt-box { position:relative; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:12px 12px 12px; margin:8px 0 4px; }
+    .prompt-box pre { white-space:pre-wrap; word-wrap:break-word; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:11px; line-height:1.55; color:var(--ink); }
+    .copy-prompt { margin-top:10px; }
+  </style>
+</head>
+<body>
+
+<div id="topbar">
+  <span id="sync-status" class="sync-status"></span>
+  <button id="dl-btn" class="tb-btn" hidden title="Download a copy of your data">&#8595; Data</button>
+  <button id="signout-btn" class="tb-btn" hidden>Sign out</button>
+  <button id="help-btn" class="tb-btn tb-help" title="How this works" aria-label="How this works">?</button>
+</div>
+
+<div id="app"></div>
+<div id="save-dot" class="save-dot">Saved &#10003;</div>
+
+<!-- Copy-summary fallback modal -->
+<div id="copy-modal" class="modal">
+  <div class="modal-c">
+    <div class="lbl">Couldn&rsquo;t auto-copy &mdash; select all and copy this:</div>
+    <textarea id="copy-text" readonly></textarea>
+    <button id="modal-close" class="btn ghost">Close</button>
+  </div>
+</div>
+
+<!-- Help / onboarding modal -->
+<div id="help-modal" class="modal">
+  <div class="modal-c help">
+    <div class="help-head">
+      <h3>Train with your AI coach</h3>
+      <button id="help-close" class="x-btn" aria-label="Close">&times;</button>
+    </div>
+    <p>This app is the logbook. Your AI (Claude, ChatGPT, or similar) is the coach. The two talk to each other through small files, with you in the middle:</p>
+    <ol class="loop">
+      <li><b>Brief your AI once</b> using the prompt below. It interviews you, then sends your <b>Week 1</b> plan as a JSON file.</li>
+      <li><b>Load the plan</b> here with <b>Load week plan</b>, and log your sessions through the week.</li>
+      <li><b>Copy the summary</b> at the bottom of the week (<b>Copy summary for your AI</b>) and paste it back to your AI.</li>
+      <li><b>Your AI reads how it went</b> and sends the next week, adjusted. Repeat.</li>
+    </ol>
+
+    <h4>The prompt to start</h4>
+    <p>Paste this to your AI in a fresh chat. It covers both the first week and every week after.</p>
+    <div class="prompt-box">
+<pre id="kickoff-prompt">You are my personal training coach. You will plan my training week by week, adapting to how each week actually goes.
+
+STEP 1 — Understand me first. Before writing any plan, interview me. Ask about:
+- my main goal and what I am training toward, and my timeframe
+- which activities I want to include and which matters most right now (this app supports running, strength, and climbing)
+- my current level and recent training in each
+- any injuries, niggles, or limitations
+- how many days per week and how long per session I realistically have, and how predictable my schedule is
+- equipment and facilities I can access
+- anything else you need to plan well
+Ask follow-up questions until you genuinely understand me. Do not rush to a plan. When you have enough, briefly summarise your understanding of me and the overall approach you will take, and check it with me.
+
+STEP 2 — Write my first week, then every week after. Output each week as ONE JSON file in exactly the format below, inside a single code block, with no commentary inside the code block. After each week I will paste back a summary of what I did, how sessions felt, my energy, and any flags. Use that to adjust and send the next week. Progress me sensibly, keep easy work genuinely easy, and build in recovery.
+
+JSON FORMAT:
+{
+  "weekNumber": 1,
+  "phase": "Base building",
+  "intro": "One or two sentences framing the week.",
+  "sessions": [
+    {
+      "id": "unique-id-for-this-session",
+      "sport": "running",
+      "day": "MON",
+      "title": "Easy aerobic run",
+      "duration": "40 min",
+      "priority": "Core",
+      "note": "Short coaching note shown under the session.",
+      "blocks": ["10 min easy warm-up", "25 min conversational pace", "5 min cool-down"]
+    }
+  ]
+}
+
+RULES:
+- "sport" must be exactly one of: "running", "strength", "climbing".
+- "priority" is "Core" (counts toward the week) or "Optional".
+- Every session needs a unique "id".
+- Increment "weekNumber" by 1 each week.
+- For running and climbing, "blocks" is a list of plain strings (one per segment). You may instead use an object per block: {"text": "...", "help": "optional extra detail revealed on tap"}.
+- For STRENGTH sessions, make each block an object: {"text": "Goblet squat — 4×6", "recommendedWeight": 14, "help": "optional technique cue"}. "recommendedWeight" is kilograms per dumbbell and appears as a suggested weight. Add a "rest" field to strength sessions for the rest-between-sets note, e.g. "rest": "90s between sets".
+- Keep notes short and practical.
+
+Start by interviewing me.</pre>
+    </div>
+    <button id="help-copy" class="btn ghost copy-prompt">Copy prompt</button>
+
+    <h4>Each following week</h4>
+    <p>Tap <span class="step">Copy summary for your AI</span> at the bottom of the week, paste it into the same chat, and load the JSON file your AI sends back with <span class="step">Load next week plan</span>. Your history stays saved in your Drive across all of it.</p>
+  </div>
+</div>
+
+<!-- Hidden file inputs -->
+<input type="file" id="plan-file-input" accept="application/json" style="display:none">
+<input type="file" id="backup-file-input" accept="application/json" style="display:none">
+
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- App scripts: auth + drive load before app -->
+<script src="auth.js"></script>
+<script src="drive.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
