@@ -112,7 +112,7 @@ var Auth = (function () {
     return new Promise(function (resolve, reject) {
       if (!tokenClient) { reject(new Error("Sign-in unavailable")); return; }
       setPending(resolve, reject);
-      try { tokenClient.requestAccessToken({ prompt: accessToken ? "" : "consent" }); }
+      try { tokenClient.requestAccessToken({ prompt: "" }); }
       catch (e) { settle(null, e); }
     });
   }
