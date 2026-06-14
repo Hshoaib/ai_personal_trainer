@@ -112,6 +112,26 @@
     .tb-btn { background:var(--bg2); border:1px solid var(--line); color:var(--dim); border-radius:30px; padding:7px 13px; font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all .15s; }
     .tb-btn:active { background:var(--bg3); }
     .tb-help { width:32px; height:32px; padding:0; justify-content:center; border-radius:50%; font-size:14px; }
+    /* Stats panel */
+    #stats-panel { border-bottom:1px solid var(--line); }
+    .stats-wrap { padding-top:14px; padding-bottom:14px; }
+    .stats-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+    .stats-head h2 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:20px; }
+    .stats-chips { display:flex; gap:7px; flex-wrap:wrap; margin:12px 0 4px; }
+    .stats-chips .chip { padding:6px 12px; font-size:12px; }
+    .stat-tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:14px 0 4px; }
+    .tile { background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:11px 8px; text-align:center; }
+    .tile b { display:block; font-family:'Fraunces',Georgia,serif; font-size:22px; font-weight:600; line-height:1; color:var(--ink); }
+    .tile span { font-size:10px; letter-spacing:.04em; text-transform:uppercase; color:var(--dim); margin-top:6px; display:block; }
+    .stats-section { margin:16px 0 4px; }
+    .stats-section .lbl { margin-top:0; margin-bottom:9px; }
+    .heatgrid { display:flex; gap:3px; overflow-x:auto; padding-bottom:4px; }
+    .heatcol { display:flex; flex-direction:column; gap:3px; flex-shrink:0; }
+    .heatcell { width:13px; height:13px; border-radius:3px; background:rgba(231,221,201,0.06); }
+    .heatcell.out { background:transparent; }
+    .heatcell.today { box-shadow:0 0 0 1.5px var(--dim); }
+    .chartbox { position:relative; height:190px; }
+    .stats-empty { color:var(--dim); font-size:13.5px; line-height:1.6; padding:16px 0 6px; }
     /* Toast */
     .save-dot { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--bg); font-size:12.5px; font-weight:600; padding:8px 18px; border-radius:30px; opacity:0; transition:opacity .25s; pointer-events:none; white-space:nowrap; z-index:100; }
     .save-dot.show { opacity:1; }
@@ -143,10 +163,12 @@
 <div id="topbar">
   <span id="sync-status" class="sync-status"></span>
   <button id="dl-btn" class="tb-btn" hidden title="Download a copy of your data">&#8595; Data</button>
+  <button id="chart-btn" class="tb-btn tb-help" hidden title="Your training stats" aria-label="Stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><line x1="6" y1="20" x2="6" y2="13"/><line x1="12" y1="20" x2="12" y2="7"/><line x1="18" y1="20" x2="18" y2="10"/></svg></button>
   <button id="signout-btn" class="tb-btn" hidden>Sign out</button>
   <button id="help-btn" class="tb-btn tb-help" title="How this works" aria-label="How this works">?</button>
 </div>
 
+<div id="stats-panel" hidden></div>
 <div id="app"></div>
 <div id="save-dot" class="save-dot">Saved &#10003;</div>
 
@@ -235,9 +257,12 @@ Start by interviewing me.</pre>
 
 <!-- Google Identity Services -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<!-- App scripts: auth + drive load before app -->
+<!-- Chart.js (for the weekly-volume chart) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- App scripts: auth + drive + stats load before app -->
 <script src="auth.js"></script>
 <script src="drive.js"></script>
+<script src="stats.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

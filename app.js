@@ -124,9 +124,11 @@ function showSaved() {
 
 function updateChrome() {
   var signed=Auth.isSignedIn();
-  var dl=document.getElementById("dl-btn"), so=document.getElementById("signout-btn");
+  var dl=document.getElementById("dl-btn"), so=document.getElementById("signout-btn"), ch=document.getElementById("chart-btn");
   if(dl) dl.hidden=!signed;
   if(so) so.hidden=!signed;
+  if(ch) ch.hidden=!signed;
+  if(!signed && window.Stats) Stats.hide();
 }
 
 // ── Render ─────────────────────────────────────────────────────────────────────
@@ -373,6 +375,7 @@ function updateProgress() {
   var ad=state.currentPlan.sessions.filter(function(s){return state.log[s.id]&&state.log[s.id].done;}).length;
   var cde=document.getElementById("core-done"), ade=document.getElementById("all-done");
   if(cde) cde.textContent=cd; if(ade) ade.textContent=ad;
+  if(window.Stats) Stats.refresh();
 }
 
 // ── Events ─────────────────────────────────────────────────────────────────────
@@ -630,6 +633,9 @@ function boot() {
 
   // Help modal backdrop
   document.getElementById("help-modal").addEventListener("click", function(e){ if(e.target===document.getElementById("help-modal")) closeHelp(); });
+
+  // Stats panel (bar-chart button in the top bar)
+  if (window.Stats) Stats.init();
 
   // Show a brief connecting state, then try to restore the session silently.
   // onAuthChange(true) loads the app; onAuthChange(false) shows the sign-in
