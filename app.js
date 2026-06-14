@@ -37,6 +37,16 @@ function blockText(b) { return typeof b==="string"?b:b.text; }
 function blockHelp(b) { return (typeof b==="object"&&b.help)?b.help:null; }
 function blockWeight(b) { return (typeof b==="object"&&b.recommendedWeight!=null)?b.recommendedWeight:null; }
 
+function titleCase(s) { return String(s||"").replace(/(^|[\s\-])([a-z])/g, function(m,a,b){ return a+b.toUpperCase(); }); }
+function hashHue(s) { var h=0; s=String(s||""); for(var i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))|0; } return Math.abs(h)%360; }
+// Known sports keep their hand-picked colour; anything else gets a stable
+// colour derived from its name and a tidied-up label.
+function sportMeta(key) {
+  if(SPORTS[key]) return SPORTS[key];
+  if(!key) return {label:"Session",color:"#888"};
+  return { label:titleCase(key), color:"hsl("+hashHue(key)+",52%,62%)" };
+}
+
 function exState(sessionId, idx) {
   var log=state.log[sessionId]; if(!log) return {checked:false,weight:"",note:""};
   var ex=log.exercises; if(!ex) return {checked:false,weight:"",note:""};
@@ -201,7 +211,8 @@ function buildApp() {
   var coreDone=plan.sessions.filter(function(s){return s.priority==="Core"&&state.log[s.id]&&state.log[s.id].done;}).length;
   var coreTotal=plan.sessions.filter(function(s){return s.priority==="Core";}).length;
   var allDone=plan.sessions.filter(function(s){return state.log[s.id]&&state.log[s.id].done;}).length;
-  var legend=Object.keys(SPORTS).map(function(k){return '<span><i style="background:'+SPORTS[k].color+'"></i>'+SPORTS[k].label+'</span>';}).join("");
+  var sportsInPlan=[]; plan.sessions.forEach(function(s){ if(sportsInPlan.indexOf(s.sport)<0) sportsInPlan.push(s.sport); });
+  var legend=sportsInPlan.map(function(k){ var m=sportMeta(k); return '<span><i style="background:'+m.color+'"></i>'+m.label+'</span>';}).join("");
   var wlChips=WORKLOAD.map(function(w){return '<button class="chip'+(state.reflection.workload===w?" on":"")+'" data-action="set-workload" data-workload="'+w+'">'+w+'</button>';}).join("");
   var enChips=[1,2,3,4,5].map(function(n){return '<button class="chip'+(state.reflection.energy===n?" on":"")+'" data-action="set-energy" data-energy="'+n+'">'+n+'</button>';}).join("");
   return '<div class="wrap">'+
@@ -229,7 +240,7 @@ function buildApp() {
 }
 
 function buildCard(s) {
-  var sport=SPORTS[s.sport]||{label:s.sport,color:"#888"};
+  var sport=sportMeta(s.sport);
   var l=state.log[s.id]||{done:false,felt:null,note:"",doneAt:null};
   var isOpen=state.open[s.id]!==false;
   var tagClass='tag'+(s.priority==="Optional"?" opt":"");
@@ -309,7 +320,7 @@ function buildStrengthBlocks(s, sport) {
 function updateCheck(id) {
   if(!state.currentPlan) return;
   var s=state.currentPlan.sessions.filter(function(x){return x.id===id;})[0]; if(!s) return;
-  var sport=SPORTS[s.sport]||{color:"#888"}, l=state.log[id]||{}, done=!!l.done;
+  var sport=sportMeta(s.sport), l=state.log[id]||{}, done=!!l.done;
   var card=document.getElementById("card-"+id), check=document.getElementById("check-"+id), dat=document.getElementById("done-at-"+id);
   if(card)  card.className="card"+(done?" done":"");
   if(check) { check.className="check"+(done?" on":""); check.style.background=done?sport.color:""; check.style.borderColor=done?sport.color:""; check.innerHTML=done?IC.check:""; }
@@ -319,7 +330,7 @@ function updateCheck(id) {
 function updateExCheck(sessionId, idx) {
   if(!state.currentPlan) return;
   var s=state.currentPlan.sessions.filter(function(x){return x.id===sessionId;})[0]; if(!s) return;
-  var sport=SPORTS[s.sport]||{color:"#888"}, checked=exState(sessionId,idx).checked;
+  var sport=sportMeta(s.sport), checked=exState(sessionId,idx).checked;
   var btn=document.getElementById("exc-"+sessionId+"-"+idx); if(!btn) return;
   btn.className="ex-check"+(checked?" on":"");
   btn.style.background=checked?sport.color:""; btn.style.borderColor=checked?sport.color:"";

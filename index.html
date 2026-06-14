@@ -181,7 +181,7 @@
 
 STEP 1 — Understand me first. Before writing any plan, interview me. Ask about:
 - my main goal and what I am training toward, and my timeframe
-- which activities I want to include and which matters most right now (this app supports running, strength, and climbing)
+- which activities I want to include and which matters most right now (for example running, strength, climbing, cycling, swimming, yoga &mdash; anything fits)
 - my current level and recent training in each
 - any injuries, niggles, or limitations
 - how many days per week and how long per session I realistically have, and how predictable my schedule is
@@ -211,7 +211,8 @@ JSON FORMAT:
 }
 
 RULES:
-- "sport" must be exactly one of: "running", "strength", "climbing".
+- "sport" is a short lowercase label for the activity &mdash; use whatever fits: "running", "strength", "climbing", "cycling", "swimming", "yoga", "rowing", and so on. Running, strength, and climbing each have their own colour; any other label is shown with its own colour and a tidy label, so feel free to use any activity.
+- Use "strength" for any resistance / gym session &mdash; those sessions also get per-exercise checkboxes and weight logging, on top of the colour.
 - "priority" is "Core" (counts toward the week) or "Optional".
 - Every session needs a unique "id".
 - Increment "weekNumber" by 1 each week.
