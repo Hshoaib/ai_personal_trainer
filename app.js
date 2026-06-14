@@ -14,7 +14,11 @@ var IC = {
   timer:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><polyline points="12 9 12 13 14.5 15.5"/><path d="M9 3h6"/></svg>',
   pen:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>',
   info:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
-  login:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>'
+  login:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>',
+  chevL:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>',
+  chevR:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
+  lock:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+  unlock:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>'
 };
 
 var SPORTS   = { running:{label:"Run",color:"#E8763C"}, climbing:{label:"Climb",color:"#4FB8A0"}, strength:{label:"Strength",color:"#E0B23C"} };
@@ -22,7 +26,7 @@ var FELT     = [{v:1,label:"Rough"},{v:2,label:"Tough"},{v:3,label:"Solid"},{v:4
 var WORKLOAD = ["Light","Normal","Heavy","Brutal"];
 var STORAGE_KEY = "tlog:v1"; // only read now, for one-time migration off this device
 
-var state = { currentWeek:null, currentPlan:null, log:{}, reflection:{workload:null,energy:null,flags:""}, open:{}, allWeeks:{} };
+var state = { currentWeek:null, currentPlan:null, log:{}, reflection:{workload:null,energy:null,flags:""}, open:{}, allWeeks:{}, locked:false };
 var saveTimer = null;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -56,34 +60,79 @@ function exState(sessionId, idx) {
 // ── State <-> data object ──────────────────────────────────────────────────────
 function resetState() {
   state.currentWeek=null; state.currentPlan=null; state.log={};
-  state.reflection={workload:null,energy:null,flags:""}; state.open={}; state.allWeeks={};
+  state.reflection={workload:null,energy:null,flags:""}; state.open={}; state.allWeeks={}; state.locked=false;
+}
+
+function weekNumbersSorted() {
+  return Object.keys(state.allWeeks).map(Number).filter(function(n){return !isNaN(n);}).sort(function(a,b){return a-b;});
+}
+function latestWeek() { var ns=weekNumbersSorted(); return ns.length?ns[ns.length-1]:null; }
+
+// Load a week into the view. Past weeks (anything but the latest) start locked.
+function loadView(n) {
+  state.currentWeek=n;
+  var wk=state.allWeeks[String(n)]||{};
+  state.currentPlan=wk.plan||null;
+  state.log=wk.log||{};
+  state.reflection=Object.assign({workload:null,energy:null,flags:""},wk.reflection||{});
+  state.open={};
+  if(state.currentPlan) state.currentPlan.sessions.forEach(function(s){state.open[s.id]=!(state.log[s.id]&&state.log[s.id].done);});
+  state.locked=(n!==latestWeek());
+}
+
+function goToWeek(n) {
+  commitView();   // keep the week we're leaving up to date in memory
+  loadView(n);
+  scheduleSave();
+  renderApp();
 }
 
 function applyData(data) {
   resetState();
   state.allWeeks=data.weeks||{};
-  state.currentWeek=(data.currentWeek!==undefined&&data.currentWeek!==null)?data.currentWeek:null;
-  if(state.currentWeek!==null) {
-    var wk=state.allWeeks[String(state.currentWeek)];
-    if(wk) {
-      state.currentPlan=wk.plan||null;
-      state.log=wk.log||{};
-      state.reflection=Object.assign({workload:null,energy:null,flags:""},wk.reflection||{});
-      if(state.currentPlan) { state.open={}; state.currentPlan.sessions.forEach(function(s){state.open[s.id]=!(state.log[s.id]&&state.log[s.id].done);}); }
-    }
-  }
+  var n=latestWeek();
+  if(n!==null) loadView(n);
+  state.locked=false; // open on the newest week, which is always editable
+}
+
+// Write the viewed week's working state back into allWeeks (in memory).
+function commitView() {
+  if(state.currentWeek===null) return;
+  var wk=String(state.currentWeek);
+  state.allWeeks[wk]=state.allWeeks[wk]||{};
+  state.allWeeks[wk].log=state.log;
+  state.allWeeks[wk].reflection=state.reflection;
+  if(state.currentPlan) state.allWeeks[wk].plan=state.currentPlan;
+  state.allWeeks[wk].updatedAt=new Date().toISOString();
 }
 
 function buildPayload() {
-  if(state.currentWeek!==null) {
-    var wk=String(state.currentWeek);
-    state.allWeeks[wk]=state.allWeeks[wk]||{};
-    state.allWeeks[wk].log=state.log;
-    state.allWeeks[wk].reflection=state.reflection;
-    if(state.currentPlan) state.allWeeks[wk].plan=state.currentPlan;
-    state.allWeeks[wk].updatedAt=new Date().toISOString();
-  }
+  commitView();
   return {version:1,currentWeek:state.currentWeek,weeks:state.allWeeks};
+}
+
+// Exercise name without its set/rep suffix, lower-cased, for matching across weeks.
+function normName(text) { return String(text||"").split("\u2014")[0].split(" -")[0].trim().toLowerCase(); }
+
+// Most recent earlier week that logged a weight for this exercise.
+function previousWeight(viewWeek, rawName) {
+  var target=normName(rawName); if(!target) return null;
+  var ns=weekNumbersSorted().filter(function(w){return w<viewWeek;}).sort(function(a,b){return b-a;});
+  for(var k=0;k<ns.length;k++) {
+    var wk=state.allWeeks[String(ns[k])]; if(!wk||!wk.plan||!wk.log) continue;
+    var sess=wk.plan.sessions||[];
+    for(var si=0;si<sess.length;si++) {
+      var s=sess[si]; if(s.sport!=="strength") continue;
+      var blocks=s.blocks||[];
+      for(var bi=0;bi<blocks.length;bi++) {
+        if(normName(blockText(blocks[bi]))===target) {
+          var lg=wk.log[s.id], ex=lg&&lg.exercises&&lg.exercises[String(bi)];
+          if(ex&&ex.weight!=null&&String(ex.weight).trim()!=="") return { weight:ex.weight, week:ns[k] };
+        }
+      }
+    }
+  }
+  return null;
 }
 
 // ── Drive persistence ──────────────────────────────────────────────────────────
@@ -218,7 +267,17 @@ function buildApp() {
   var legend=sportsInPlan.map(function(k){ var m=sportMeta(k); return '<span><i style="background:'+m.color+'"></i>'+m.label+'</span>';}).join("");
   var wlChips=WORKLOAD.map(function(w){return '<button class="chip'+(state.reflection.workload===w?" on":"")+'" data-action="set-workload" data-workload="'+w+'">'+w+'</button>';}).join("");
   var enChips=[1,2,3,4,5].map(function(n){return '<button class="chip'+(state.reflection.energy===n?" on":"")+'" data-action="set-energy" data-energy="'+n+'">'+n+'</button>';}).join("");
-  return '<div class="wrap">'+
+  var ns=weekNumbersSorted(), idx=ns.indexOf(state.currentWeek);
+  var hasPrev=idx>0, hasNext=idx>=0&&idx<ns.length-1, isLatest=state.currentWeek===latestWeek();
+  var lockBtn=isLatest?'':
+    '<button class="wn-lock'+(state.locked?'':' open')+'" data-action="toggle-lock">'+(state.locked?IC.lock:IC.unlock)+'<span>'+(state.locked?'Locked':'Editing')+'</span></button>';
+  var weeknav=
+    '<div class="weeknav">'+
+      '<button class="wn-btn" data-action="week-prev"'+(hasPrev?'':' disabled')+' aria-label="Previous week">'+IC.chevL+'</button>'+
+      '<div class="wn-mid"><span class="wn-label">Week '+state.currentWeek+'</span>'+(isLatest?'':'<span class="wn-tag">history</span>')+lockBtn+'</div>'+
+      '<button class="wn-btn" data-action="week-next"'+(hasNext?'':' disabled')+' aria-label="Next week">'+IC.chevR+'</button>'+
+    '</div>';
+  return '<div class="wrap'+(state.locked?' locked':'')+'">'+
     '<header class="hd">'+
       '<div class="kicker">'+(plan.phase||"")+'</div>'+
       '<h1 class="h1">Training <em>Week '+plan.weekNumber+'</em></h1>'+
@@ -226,6 +285,7 @@ function buildApp() {
       '<div class="prog"><div><b class="c-run" id="core-done">'+coreDone+'</b><span>/'+coreTotal+' core</span></div><div><b id="all-done">'+allDone+'</b><span>/'+plan.sessions.length+' total</span></div></div>'+
       '<div class="legend">'+legend+'</div>'+
     '</header>'+
+    weeknav+
     '<div id="cards">'+plan.sessions.map(buildCard).join("")+'</div>'+
     '<div class="foot">Sun \u00b7 full rest \u2014 light walk or mobility only if you feel like it.</div>'+
     '<h2 class="sec-h">How was the week?</h2>'+
@@ -293,6 +353,7 @@ function buildStrengthBlocks(s, sport) {
     var helpId="help-"+s.id+"-"+i;
     var ex=exState(s.id,i);
     var isChecked=ex.checked;
+    var prev=previousWeight(state.currentWeek,text);
     return '<li class="eli">'+
       '<div class="ex-row">'+
         '<button class="ex-check'+(isChecked?" on":"")+'" id="exc-'+s.id+'-'+i+'" '+
@@ -309,6 +370,7 @@ function buildStrengthBlocks(s, sport) {
                'data-action="set-ex-weight" data-sid="'+s.id+'" data-eidx="'+i+'" '+
                (recW!==null?'placeholder="'+recW+' \u2014 recommended"':'placeholder="kg"')+'>'+
         '<span class="ex-weight-unit">kg / DB</span>'+
+        (prev?'<span class="ex-prev">last '+prev.weight+' \u00b7 wk '+prev.week+'</span>':'')+
         '<button class="ex-pen-btn" id="expb-'+s.id+'-'+i+'" data-action="toggle-ex-note" data-nwid="exnw-'+s.id+'-'+i+'" data-pbid="expb-'+s.id+'-'+i+'">'+IC.pen+'</button>'+
       '</div>'+
       '<div class="ex-note-wrap" id="exnw-'+s.id+'-'+i+'" style="display:none">'+
@@ -385,6 +447,15 @@ function handleClick(e) {
   if(!btn||!btn.dataset||!btn.dataset.action) return;
   var action=btn.dataset.action;
 
+  // Navigation and lock work regardless of lock state.
+  if(action==="week-prev") { var p=weekNumbersSorted(), j=p.indexOf(state.currentWeek); if(j>0) goToWeek(p[j-1]); return; }
+  if(action==="week-next") { var q=weekNumbersSorted(), m=q.indexOf(state.currentWeek); if(m>=0&&m<q.length-1) goToWeek(q[m+1]); return; }
+  if(action==="toggle-lock") { state.locked=!state.locked; renderApp(); return; }
+
+  // While viewing a locked past week, ignore anything that would edit it.
+  var EDIT={ "toggle-done":1,"toggle-exercise":1,"toggle-ex-note":1,"set-felt":1,"set-workload":1,"set-energy":1 };
+  if(state.locked && EDIT[action]) return;
+
   if(action==="signin") {
     Auth.signIn().catch(function(){ /* popup closed or dismissed */ });
 
@@ -447,6 +518,7 @@ function handleClick(e) {
 
 function handleInput(e) {
   var el=e.target; if(!el.dataset||!el.dataset.action) return;
+  if(state.locked) return;   // no edits to a locked past week
   var action=el.dataset.action;
   if(action==="set-note") {
     var id=el.dataset.id;
@@ -496,6 +568,7 @@ function handlePlanFile(e) {
       state.currentWeek=plan.weekNumber; state.currentPlan=plan;
       state.log=state.allWeeks[wk].log; state.reflection=state.allWeeks[wk].reflection;
       state.open={}; plan.sessions.forEach(function(s){state.open[s.id]=!(state.log[s.id]&&state.log[s.id].done);});
+      state.locked=false;
       persistNow();
       renderApp();
     } catch(err) { alert("Couldn\u2019t load plan \u2014 make sure you\u2019re opening a week plan file."); }

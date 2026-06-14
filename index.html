@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>Training Log</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap');
     * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
@@ -132,6 +133,22 @@
     .heatcell.today { box-shadow:0 0 0 1.5px var(--dim); }
     .chartbox { position:relative; height:190px; }
     .stats-empty { color:var(--dim); font-size:13.5px; line-height:1.6; padding:16px 0 6px; }
+    /* Week navigation */
+    .weeknav { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:4px 0 2px; padding:6px 0; }
+    .wn-btn { width:38px; height:38px; border-radius:10px; border:1px solid var(--line); background:var(--bg2); color:var(--ink); cursor:pointer; display:grid; place-items:center; transition:opacity .15s; flex-shrink:0; }
+    .wn-btn:disabled { opacity:.28; cursor:default; }
+    .wn-btn svg { width:20px; height:20px; }
+    .wn-mid { display:flex; align-items:center; gap:9px; flex-wrap:wrap; justify-content:center; }
+    .wn-label { font-family:'Fraunces',Georgia,serif; font-size:15px; font-weight:600; }
+    .wn-tag { font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); border:1px solid var(--line); border-radius:20px; padding:2px 8px; }
+    .wn-lock { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--line); background:transparent; color:var(--dim); border-radius:20px; padding:4px 10px; font-family:inherit; font-size:11px; font-weight:700; letter-spacing:.04em; cursor:pointer; }
+    .wn-lock svg { width:13px; height:13px; }
+    .wn-lock.open { color:var(--strength); border-color:rgba(224,178,60,0.45); }
+    .ex-prev { font-size:11.5px; color:var(--faint); white-space:nowrap; }
+    /* Locked past week: keep reading/expanding, disable editing controls */
+    .wrap.locked .check, .wrap.locked .ex-check, .wrap.locked .fbtn,
+    .wrap.locked .ex-weight, .wrap.locked .ex-note, .wrap.locked textarea.note,
+    .wrap.locked .ex-pen-btn, .wrap.locked .chip { pointer-events:none; opacity:.5; }
     /* Toast */
     .save-dot { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--bg); font-size:12.5px; font-weight:600; padding:8px 18px; border-radius:30px; opacity:0; transition:opacity .25s; pointer-events:none; white-space:nowrap; z-index:100; }
     .save-dot.show { opacity:1; }
@@ -240,6 +257,7 @@ RULES:
 - Increment "weekNumber" by 1 each week.
 - For running and climbing, "blocks" is a list of plain strings (one per segment). You may instead use an object per block: {"text": "...", "help": "optional extra detail revealed on tap"}.
 - For STRENGTH sessions, make each block an object: {"text": "Goblet squat — 4×6", "recommendedWeight": 14, "help": "optional technique cue"}. "recommendedWeight" is kilograms per dumbbell and appears as a suggested weight. Add a "rest" field to strength sessions for the rest-between-sets note, e.g. "rest": "90s between sets".
+- Keep exercise names consistent from week to week (e.g. always "Goblet squat", not "Goblet squats" one week and "Goblet Squat" the next). The app matches on the name to show the weight used in previous sessions, so stable names keep progress tracking working.
 - Keep notes short and practical.
 
 Start by interviewing me.</pre>
