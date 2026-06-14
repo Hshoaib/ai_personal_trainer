@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — AI Personal Trainer</title>
+  <meta name="description" content="Privacy policy for the AI Personal Trainer training log app.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:    #14110D;
+      --bg2:   #1E1A14;
+      --line:  rgba(231,221,201,0.10);
+      --ink:   #EDE6D6;
+      --dim:   #A1967F;
+      --faint: #6E6555;
+      --run:   #E8763C;
+      --climb: #4FB8A0;
+    }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+    }
+    .wrap { max-width: 600px; margin: 0 auto; padding: 0 24px; }
+
+    nav {
+      padding: 22px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-name {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 17px;
+      font-weight: 500;
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .nav-back {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--dim);
+      text-decoration: none;
+      transition: color .15s;
+    }
+    .nav-back:hover { color: var(--ink); }
+
+    .page-head { padding: 48px 0 40px; border-bottom: 1px solid var(--line); }
+    .kicker {
+      font-size: 11px;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      color: var(--faint);
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+    h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 32px;
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -.015em;
+    }
+    .updated {
+      font-size: 13px;
+      color: var(--faint);
+      margin-top: 10px;
+    }
+
+    .content { padding: 40px 0 60px; }
+    .content section { margin-bottom: 36px; }
+    h2 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 10px;
+    }
+    p {
+      font-size: 14.5px;
+      line-height: 1.7;
+      color: var(--dim);
+      margin-bottom: 12px;
+    }
+    p:last-child { margin-bottom: 0; }
+    strong { color: var(--ink); font-weight: 600; }
+
+    .highlight {
+      background: var(--bg2);
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--climb);
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin: 24px 0 0;
+    }
+    .highlight p { font-size: 13.5px; margin-bottom: 0; }
+
+    footer {
+      padding: 28px 0;
+      border-top: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    footer span { font-size: 12.5px; color: var(--faint); }
+    footer a { font-size: 12.5px; color: var(--faint); text-decoration: none; transition: color .15s; }
+    footer a:hover { color: var(--dim); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav>
+      <a href="./" class="nav-name">AI Personal Trainer</a>
+      <a href="./" class="nav-back">&larr; Back to app</a>
+    </nav>
+
+    <header class="page-head">
+      <div class="kicker">AI Personal Trainer</div>
+      <h1>Privacy Policy</h1>
+      <p class="updated">Last updated: June 2026</p>
+    </header>
+
+    <div class="content">
+      <section>
+        <h2>Overview</h2>
+        <p>AI Personal Trainer is a personal training log application. It helps you load weekly workout plans, log your sessions, and export summaries to share with an AI coach. This policy explains what data the app accesses, how it is used, and how you can control or delete it.</p>
+        <p>The short version: <strong>your training data is stored in your own Google Drive and never leaves it</strong>. We have no servers, no database, and no access to your data.</p>
+      </section>
+
+      <section>
+        <h2>What data the app accesses</h2>
+        <p>When you sign in with Google, the app requests one permission: access to a <strong>private, app-specific folder</strong> in your Google Drive using the <code>drive.appdata</code> scope.</p>
+        <p>This folder is hidden from your normal Drive view and cannot be accessed by any other application. The only data stored in it is your training log — a single JSON file containing the workout plans you load and the session notes, ratings, and completion records you enter.</p>
+        <p>The app does <strong>not</strong> access your name, email address, profile photo, or any other Google account information. It does not access any other files in your Google Drive.</p>
+      </section>
+
+      <section>
+        <h2>How your data is used</h2>
+        <p>Your training data is used solely to display your own training history and sessions within the app. It is not transmitted to any server, not shared with any third party, and not used for advertising, analytics, or any other purpose.</p>
+        <p>The app operates entirely in your browser. When you copy a weekly summary to paste into an AI assistant, that action happens on your device — the app does not send anything anywhere automatically.</p>
+      </section>
+
+      <section>
+        <h2>Data retention and deletion</h2>
+        <p>Your training data is retained in your Google Drive until you choose to delete it. To remove all data associated with this app:</p>
+        <p>Go to your <strong>Google Account → Security → Third-party apps with account access</strong>, find AI Personal Trainer, and select <strong>Remove access</strong>. This revokes the app's authorisation immediately.</p>
+        <p>To delete the stored training data itself, go to <strong>Google Drive → Settings (gear icon) → Manage apps</strong>, find AI Personal Trainer, and select <strong>Delete hidden app data</strong>.</p>
+      </section>
+
+      <section>
+        <h2>Third-party services</h2>
+        <p>The app loads two external resources:</p>
+        <p><strong>Google Identity Services</strong> — handles the sign-in flow. Subject to <a href="https://policies.google.com/privacy" style="color:var(--climb)">Google's Privacy Policy</a>.</p>
+        <p><strong>Chart.js (jsDelivr CDN)</strong> — a charting library used to render the sessions-per-week bar chart. No user data is sent to jsDelivr; it serves only the library file.</p>
+        <p>No other third-party services, trackers, or analytics are used.</p>
+      </section>
+
+      <section>
+        <h2>Cookies and local storage</h2>
+        <p>The app stores a short-lived Google access token in your browser's session storage to avoid prompting you to sign in on every page refresh. This token expires within one hour and is cleared when you close the tab or sign out. No persistent cookies are set.</p>
+      </section>
+
+      <section>
+        <h2>Changes to this policy</h2>
+        <p>If this policy changes in a material way, the updated date at the top of this page will reflect it. Continued use of the app after changes constitutes acceptance of the updated policy.</p>
+      </section>
+
+      <section>
+        <h2>Contact</h2>
+        <p>Questions about this privacy policy or the app's data handling can be directed to <strong>hamza@hamzashoaib.com</strong>.</p>
+      </section>
+
+      <div class="highlight">
+        <p><strong>To summarise plainly:</strong> the app only ever reads and writes your own training log, stored in a hidden folder in your own Google Drive. No one else can see it, including us.</p>
+      </div>
+    </div>
+
+    <footer>
+      <span>&copy; 2026 Hamza Shoaib</span>
+      <a href="./">Back to app</a>
+    </footer>
+  </div>
+</body>
+</html>

@@ -149,6 +149,7 @@ function renderSignedOut() {
     '<div style="margin-top:30px"><button class="btn primary" data-action="signin">'+IC.login+' Sign in with Google</button></div>'+
     '<div style="margin-top:12px"><button class="btn ghost" data-action="open-help">'+IC.info+' How this works</button></div>'+
     '<p class="foot" style="margin-top:30px">Your training data lives in your Google Drive, in a private app folder.<br>It syncs to you, and only you.</p>'+
+    '<p class="foot" style="margin-top:10px"><a href="privacy.html" style="color:var(--dim);text-decoration:underline">Privacy policy</a></p>'+
     '</div></div>';
 }
 
