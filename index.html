@@ -126,11 +126,21 @@
     .tile span { font-size:10px; letter-spacing:.04em; text-transform:uppercase; color:var(--dim); margin-top:6px; display:block; }
     .stats-section { margin:16px 0 4px; }
     .stats-section .lbl { margin-top:0; margin-bottom:9px; }
-    .heatgrid { display:flex; gap:3px; overflow-x:auto; padding-bottom:4px; }
-    .heatcol { display:flex; flex-direction:column; gap:3px; flex-shrink:0; }
-    .heatcell { width:13px; height:13px; border-radius:3px; background:rgba(231,221,201,0.06); }
+    .heatcol { display:flex; flex-direction:column; gap:2.5px; flex-shrink:0; }
+    .heatcell { width:12px; height:12px; border-radius:3px; background:rgba(231,221,201,0.06); }
     .heatcell.out { background:transparent; }
+    .heatcell.future { background:rgba(231,221,201,0.02); }
     .heatcell.today { box-shadow:0 0 0 1.5px var(--dim); }
+    .cal-pager { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+    .cal-range { font-size:12.5px; color:var(--dim); font-weight:600; }
+    .cal-pg { width:32px; height:32px; }
+    .cal { display:flex; gap:12px; overflow-x:auto; padding-bottom:4px; }
+    .cal-days { display:flex; flex-direction:column; flex-shrink:0; }
+    .cal-month { display:flex; flex-direction:column; flex-shrink:0; }
+    .cal-monthhead { height:16px; display:flex; align-items:center; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); font-weight:700; }
+    .cal-daylabels { display:flex; flex-direction:column; gap:2.5px; padding-right:4px; }
+    .cal-daylabels span { height:12px; line-height:12px; font-size:8.5px; color:var(--faint); }
+    .cal-grid { display:flex; gap:2.5px; }
     .chartbox { position:relative; height:190px; }
     .stats-empty { color:var(--dim); font-size:13.5px; line-height:1.6; padding:16px 0 6px; }
     /* Week navigation */
@@ -148,7 +158,33 @@
     /* Locked past week: keep reading/expanding, disable editing controls */
     .wrap.locked .check, .wrap.locked .ex-check, .wrap.locked .fbtn,
     .wrap.locked .ex-weight, .wrap.locked .ex-note, .wrap.locked textarea.note,
-    .wrap.locked .ex-pen-btn, .wrap.locked .chip { pointer-events:none; opacity:.5; }
+    .wrap.locked .ex-pen-btn, .wrap.locked .chip, .wrap.locked .cardio-field { pointer-events:none; opacity:.5; }
+    /* Rest timer */
+    .rest-btn { background:none; border:none; color:var(--dim); cursor:pointer; padding:0; display:inline-grid; place-items:center; flex-shrink:0; }
+    .rest-btn.running { color:var(--run); }
+    .rest-text { flex:1; }
+    .rest-count { font-variant-numeric:tabular-nums; font-weight:700; color:var(--run); min-width:38px; text-align:right; }
+    .rest-count.done { color:var(--climb); }
+    /* Cardio fields */
+    .cardio-row { display:flex; gap:8px; margin:2px 0 12px; }
+    .cardio-field, .cardio-pace { flex:1; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:9px 10px; text-align:left; font-family:inherit; }
+    .cardio-field { cursor:pointer; }
+    .cardio-field:active { border-color:var(--dim); }
+    .cf-label { display:block; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); margin-bottom:3px; }
+    .cf-val { display:block; font-size:14px; color:var(--ink); font-variant-numeric:tabular-nums; }
+    .cardio-pace { background:transparent; }
+    /* Scroll picker */
+    .modal-c.picker { max-width:300px; }
+    .pk-body { display:flex; align-items:center; justify-content:center; gap:4px; position:relative; margin:8px 0 4px; }
+    .pk-body::before { content:""; position:absolute; left:8px; right:8px; top:50%; transform:translateY(-50%); height:34px; background:rgba(231,221,201,0.06); border-radius:8px; pointer-events:none; }
+    .pk-wheel { height:170px; width:54px; overflow-y:auto; scroll-snap-type:y mandatory; box-sizing:border-box; scrollbar-width:none; }
+    .pk-wheel::-webkit-scrollbar { display:none; }
+    .pk-item { height:34px; line-height:34px; text-align:center; scroll-snap-align:center; font-size:21px; color:var(--ink); font-variant-numeric:tabular-nums; }
+    .pk-pad { height:68px; }
+    .pk-sep { font-size:21px; color:var(--dim); }
+    .pk-unit { font-size:11.5px; color:var(--dim); align-self:center; margin-left:6px; }
+    .pk-actions { display:flex; gap:10px; margin-top:8px; }
+    .pk-actions .btn { flex:1; margin-top:0; }
     /* Toast */
     .save-dot { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--bg); font-size:12.5px; font-weight:600; padding:8px 18px; border-radius:30px; opacity:0; transition:opacity .25s; pointer-events:none; white-space:nowrap; z-index:100; }
     .save-dot.show { opacity:1; }
@@ -198,6 +234,18 @@
   </div>
 </div>
 
+<!-- Scroll-wheel picker (distance / time) -->
+<div id="picker-modal" class="modal">
+  <div class="modal-c picker">
+    <div class="lbl" id="picker-title">Set value</div>
+    <div class="pk-body" id="picker-body"></div>
+    <div class="pk-actions">
+      <button id="picker-cancel" class="btn ghost">Cancel</button>
+      <button id="picker-done" class="btn primary">Done</button>
+    </div>
+  </div>
+</div>
+
 <!-- Help / onboarding modal -->
 <div id="help-modal" class="modal">
   <div class="modal-c help">
@@ -243,6 +291,9 @@ JSON FORMAT:
       "title": "Easy aerobic run",
       "duration": "40 min",
       "priority": "Core",
+      "cardio": true,
+      "distanceKm": 6,
+      "targetTime": "36:00",
       "note": "Short coaching note shown under the session.",
       "blocks": ["10 min easy warm-up", "25 min conversational pace", "5 min cool-down"]
     }
@@ -257,6 +308,7 @@ RULES:
 - Increment "weekNumber" by 1 each week.
 - For running and climbing, "blocks" is a list of plain strings (one per segment). You may instead use an object per block: {"text": "...", "help": "optional extra detail revealed on tap"}.
 - For STRENGTH sessions, make each block an object: {"text": "Goblet squat — 4×6", "recommendedWeight": 14, "help": "optional technique cue"}. "recommendedWeight" is kilograms per dumbbell and appears as a suggested weight. Add a "rest" field to strength sessions for the rest-between-sets note, e.g. "rest": "90s between sets".
+- For cardio sessions (runs, rides, swims, rows, etc.), add "cardio": true to the session. The app then shows Distance and Time fields the user fills in, and computes pace. Optionally pre-fill the plan's targets with "distanceKm": 5 (a number, kilometres) and "targetTime": "25:00" (mm:ss) — the user can adjust both. A strength rest timer ("rest" field) and cardio fields are independent, so a session can use whichever fits.
 - Keep exercise names consistent from week to week (e.g. always "Goblet squat", not "Goblet squats" one week and "Goblet Squat" the next). The app matches on the name to show the weight used in previous sessions, so stable names keep progress tracking working.
 - Keep notes short and practical.
 

@@ -15,6 +15,9 @@ var Stats = (function () {
   var visible = false;
   var filter = "ALL";       // "ALL" or a specific sport key
   var chart = null;
+  var monthOffset = 0;      // 0 = window ends on the current month; +1 pages back a month
+  var CHEV_L = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
+  var CHEV_R = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
 
   // ── date helpers ──────────────────────────────────────────────────────────────
   function dayKey(d) { return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
@@ -77,23 +80,72 @@ var Stats = (function () {
     return { current: current, longest: longest, activeWeeks: keys.length };
   }
 
-  function heatColumns(ev) {
-    var doneDays = {};
-    ev.forEach(function (e) { doneDays[e.dayKey] = true; });
+  function monthIdxOf(d) { return d.getFullYear() * 12 + d.getMonth(); }
+  function ymFromIdx(mi) { return { y: Math.floor(mi / 12), m: ((mi % 12) + 12) % 12 }; }
+  function earliestEventMonth(ev) {
+    var min = null;
+    ev.forEach(function (e) { var mi = monthIdxOf(e.date); if (min === null || mi < min) min = mi; });
+    return min;
+  }
+
+  // One calendar month as columns of weeks; rows are weekdays (Mon..Sun).
+  function monthBlock(year, month, doneDays) {
+    var firstCol = (new Date(year, month, 1).getDay() + 6) % 7;   // weekday of the 1st, Mon=0
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
+    var weeks = Math.ceil((firstCol + daysInMonth) / 7);
     var today = new Date(); today.setHours(0, 0, 0, 0);
-    var start = new Date(today); start.setDate(start.getDate() - (HEATMAP_DAYS - 1));
-    var cur = weekStart(start);
     var cols = [];
-    while (cur <= today) {
+    for (var w = 0; w < weeks; w++) {
       var col = [];
       for (var r = 0; r < 7; r++) {
-        var inRange = cur >= start && cur <= today;
-        col.push({ active: inRange && !!doneDays[dayKey(cur)], inRange: inRange, isToday: cur.getTime() === today.getTime() });
-        cur.setDate(cur.getDate() + 1);
+        var dayNum = w * 7 + r - firstCol + 1;
+        if (dayNum < 1 || dayNum > daysInMonth) { col.push({ blank: true }); continue; }
+        var d = new Date(year, month, dayNum);
+        var k = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+        col.push({ blank: false, active: !!doneDays[k], isToday: d.getTime() === today.getTime(), future: d > today });
       }
       cols.push(col);
     }
     return cols;
+  }
+
+  function buildCalendar(doneDays, allEv) {
+    var nowMI = monthIdxOf(new Date());
+    var anchor = nowMI - monthOffset;
+    var months = [anchor - 2, anchor - 1, anchor];
+    var earliest = earliestEventMonth(allEv);
+    var canLater = monthOffset > 0;
+    var canEarlier = earliest !== null && months[0] > earliest;
+    var activeColor = filter === "ALL" ? "var(--climb)" : meta(filter).color;
+
+    var a = ymFromIdx(months[0]), b = ymFromIdx(months[2]);
+    var range = (a.y === b.y) ? (MON[a.m] + " \u2013 " + MON[b.m] + " " + b.y)
+                              : (MON[a.m] + " " + a.y + " \u2013 " + MON[b.m] + " " + b.y);
+
+    var DL = ["M", "T", "W", "T", "F", "S", "S"];
+    var dayCol = '<div class="cal-days"><div class="cal-monthhead"></div><div class="cal-daylabels">' +
+      DL.map(function (x) { return "<span>" + x + "</span>"; }).join("") + '</div></div>';
+
+    var blocks = months.map(function (mi) {
+      var ym = ymFromIdx(mi);
+      var grid = '<div class="cal-grid">' + monthBlock(ym.y, ym.m, doneDays).map(function (col) {
+        return '<div class="heatcol">' + col.map(function (c) {
+          if (c.blank) return '<div class="heatcell out"></div>';
+          var cls = "heatcell" + (c.isToday ? " today" : "") + (c.future ? " future" : "");
+          var style = c.active ? ' style="background:' + activeColor + '"' : '';
+          return '<div class="' + cls + '"' + style + '></div>';
+        }).join("") + '</div>';
+      }).join("") + '</div>';
+      return '<div class="cal-month"><div class="cal-monthhead">' + MON[ym.m] + '</div>' + grid + '</div>';
+    }).join("");
+
+    var pager = '<div class="cal-pager">' +
+      '<button class="wn-btn cal-pg" data-stats-page="earlier"' + (canEarlier ? '' : ' disabled') + '>' + CHEV_L + '</button>' +
+      '<span class="cal-range">' + range + '</span>' +
+      '<button class="wn-btn cal-pg" data-stats-page="later"' + (canLater ? '' : ' disabled') + '>' + CHEV_R + '</button>' +
+      '</div>';
+
+    return pager + '<div class="cal">' + dayCol + blocks + '</div>';
   }
 
   function weeklyAxis() {
@@ -148,19 +200,12 @@ var Stats = (function () {
       tile(st.longest, "Best streak") +
       '</div>';
 
-    // Heatmap
-    var activeColor = filter === "ALL" ? "var(--climb)" : meta(filter).color;
-    var cols = heatColumns(fEv);
-    var grid = '<div class="heatgrid">' + cols.map(function (col) {
-      return '<div class="heatcol">' + col.map(function (c) {
-        var cls = "heatcell" + (c.inRange ? "" : " out") + (c.isToday ? " today" : "");
-        var style = c.active ? ' style="background:' + activeColor + '"' : '';
-        return '<div class="' + cls + '"' + style + '></div>';
-      }).join("") + '</div>';
-    }).join("") + '</div>';
-
-    var heat = '<div class="stats-section"><div class="lbl">Last 60 days' +
-      (filter === "ALL" ? "" : " \u00b7 " + meta(filter).label) + '</div>' + grid + '</div>';
+    // Heatmap (calendar months)
+    var doneDays = {};
+    fEv.forEach(function (e) { doneDays[e.dayKey] = true; });
+    var heat = '<div class="stats-section"><div class="lbl">Days trained' +
+      (filter === "ALL" ? "" : " \u00b7 " + meta(filter).label) + '</div>' +
+      buildCalendar(doneDays, allEv) + '</div>';
 
     var chartSec = '<div class="stats-section"><div class="lbl">Sessions per week</div>' +
       '<div class="chartbox"><canvas id="vol-chart"></canvas></div></div>';
@@ -179,6 +224,13 @@ var Stats = (function () {
     panel.querySelectorAll("[data-stats-filter]").forEach(function (b) {
       b.addEventListener("click", function () {
         filter = b.getAttribute("data-stats-filter");
+        render();
+      });
+    });
+    panel.querySelectorAll("[data-stats-page]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        if (b.getAttribute("data-stats-page") === "earlier") monthOffset++;
+        else monthOffset = Math.max(0, monthOffset - 1);
         render();
       });
     });
@@ -229,7 +281,7 @@ var Stats = (function () {
   }
 
   // ── public ────────────────────────────────────────────────────────────────────
-  function show() { visible = true; var p = document.getElementById("stats-panel"); if (p) { p.hidden = false; } render(); syncBtn(); }
+  function show() { visible = true; monthOffset = 0; var p = document.getElementById("stats-panel"); if (p) { p.hidden = false; } render(); syncBtn(); }
   function hide() { visible = false; var p = document.getElementById("stats-panel"); if (p) p.hidden = true; if (chart) { chart.destroy(); chart = null; } syncBtn(); }
   function toggle() { visible ? hide() : show(); }
   function syncBtn() { var b = document.getElementById("chart-btn"); if (b) b.classList.toggle("on", visible); }

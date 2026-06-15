@@ -28,6 +28,9 @@ var STORAGE_KEY = "tlog:v1"; // only read now, for one-time migration off this d
 
 var state = { currentWeek:null, currentPlan:null, log:{}, reflection:{workload:null,energy:null,flags:""}, open:{}, allWeeks:{}, locked:false };
 var saveTimer = null;
+var restTimers = {};       // sessionId -> interval id for the rest countdown
+var pickerCtx = null;      // { sid, field } for the active scroll picker
+var PK_ITEM = 34;          // px height of one picker item (must match CSS)
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function formatDoneAt(iso) {
@@ -309,7 +312,12 @@ function buildCard(s) {
   var tagClass='tag'+(s.priority==="Optional"?" opt":"");
   var tagStyle=s.priority==="Core"?' style="background:'+sport.color+';color:#1a1208"':'';
   var doneAtText=l.done&&l.doneAt?formatDoneAt(l.doneAt):"";
-  var restHtml=s.rest?'<div class="rest-info">'+IC.timer+s.rest+'</div>':"";
+  var restHtml=s.rest?'<div class="rest-info">'+
+      '<button class="rest-btn" data-action="rest-timer" data-id="'+s.id+'" data-secs="'+parseRestSeconds(s.rest)+'" aria-label="Start rest timer">'+IC.timer+'</button>'+
+      '<span class="rest-text">'+s.rest+'</span>'+
+      '<span class="rest-count" id="rest-count-'+s.id+'"></span>'+
+    '</div>':"";
+  var cardioHtml=s.cardio?buildCardioRow(s):"";
   var blocksHtml=s.sport==="strength"?buildStrengthBlocks(s,sport):buildSimpleBlocks(s,sport);
   var notePlaceholder=s.sport==="strength"?"Overall session note \u2014 form, how you felt, anything to flag\u2026":"Optional note \u2014 how it felt, anything off, what you adjusted\u2026";
   var feltBtns=FELT.map(function(f){return '<button class="fbtn'+(l.felt===f.v?" on":"")+'" data-action="set-felt" data-id="'+s.id+'" data-felt="'+f.v+'"><b>'+f.v+'</b><small>'+f.label+'</small></button>';}).join("");
@@ -328,6 +336,7 @@ function buildCard(s) {
       restHtml+
       '<ul class="blocks">'+blocksHtml+'</ul>'+
       '<div class="coach" style="border-left-color:'+sport.color+'">'+(s.note||"")+'</div>'+
+      cardioHtml+
       '<div class="felt">'+feltBtns+'</div>'+
       '<textarea class="note" data-action="set-note" data-id="'+s.id+'" placeholder="'+notePlaceholder+'" rows="2"></textarea>'+
     '</div>'+
@@ -379,6 +388,135 @@ function buildStrengthBlocks(s, sport) {
       (help?'<div class="help-text" id="'+helpId+'">'+help+'</div>':'')+
     '</li>';
   }).join("");
+}
+
+// ── Rest timer ─────────────────────────────────────────────────────────────────
+function fmtClock(t) { var m=Math.floor(t/60), s=t%60; return m+":"+String(s).padStart(2,"0"); }
+
+function parseRestSeconds(str) {
+  if(!str) return 60;
+  var s=String(str);
+  var mmss=s.match(/(\d+)\s*:\s*(\d+)/); if(mmss) return parseInt(mmss[1])*60+parseInt(mmss[2]);
+  var min=s.match(/(\d+(?:\.\d+)?)\s*m/i), sec=s.match(/(\d+)\s*s/i);
+  if(min) { var total=Math.round(parseFloat(min[1])*60); if(sec) total+=parseInt(sec[1]); return total; }
+  if(sec) return parseInt(sec[1]);
+  var n=s.match(/(\d+)/); return n?parseInt(n[1]):60;
+}
+
+function cancelRestTimer(sid) {
+  if(restTimers[sid]) { clearInterval(restTimers[sid]); delete restTimers[sid]; }
+  var el=document.getElementById("rest-count-"+sid);
+  var btn=document.querySelector('.rest-btn[data-id="'+sid+'"]');
+  if(btn) btn.classList.remove("running");
+  if(el) { el.textContent=""; el.classList.remove("done"); }
+}
+
+function startRestTimer(sid, secs) {
+  cancelRestTimer(sid);
+  var el=document.getElementById("rest-count-"+sid);
+  var btn=document.querySelector('.rest-btn[data-id="'+sid+'"]');
+  if(btn) btn.classList.add("running");
+  var remaining=secs;
+  if(el) { el.classList.remove("done"); el.textContent=fmtClock(remaining); }
+  restTimers[sid]=setInterval(function() {
+    remaining--;
+    if(remaining<=0) {
+      clearInterval(restTimers[sid]); delete restTimers[sid];
+      if(btn) btn.classList.remove("running");
+      if(el) { el.textContent="Time!"; el.classList.add("done"); }
+      try { if(navigator.vibrate) navigator.vibrate([200,80,200]); } catch(e) {}
+      setTimeout(function(){ if(el&&el.classList.contains("done")){ el.textContent=""; el.classList.remove("done"); } },4000);
+      return;
+    }
+    if(el) el.textContent=fmtClock(remaining);
+  },1000);
+}
+
+// ── Cardio fields ──────────────────────────────────────────────────────────────
+function currentSession(sid) {
+  if(!state.currentPlan) return null;
+  return state.currentPlan.sessions.filter(function(x){return x.id===sid;})[0]||null;
+}
+function parseClock(str) {
+  if(!str) return null;
+  var m=String(str).match(/(\d+)\s*:\s*(\d+)/); if(m) return parseInt(m[1])*60+parseInt(m[2]);
+  var n=String(str).match(/^\s*(\d+)\s*$/); return n?parseInt(n[1])*60:null;
+}
+function fmtPace(spk) { var t=Math.round(spk), m=Math.floor(t/60), s=t%60; return m+":"+String(s).padStart(2,"0")+" /km"; }
+
+function cardioValues(s) {
+  var l=state.log[s.id]||{};
+  var dist=(l.distanceKm!=null)?l.distanceKm:(s.distanceKm!=null?s.distanceKm:null);
+  var tsec=(l.timeSec!=null)?l.timeSec:parseClock(s.targetTime);
+  return { dist:dist, tsec:tsec };
+}
+
+function buildCardioRow(s) {
+  var v=cardioValues(s);
+  var distLabel=v.dist!=null?Number(v.dist).toFixed(1)+" km":"Set km";
+  var timeLabel=v.tsec!=null?fmtClock(v.tsec):"Set time";
+  var pace=(v.dist>0&&v.tsec>0)?fmtPace(v.tsec/v.dist):"\u2014";
+  return '<div class="cardio-row">'+
+    '<button class="cardio-field" data-action="open-dist" data-id="'+s.id+'"><span class="cf-label">Distance</span><span class="cf-val" id="dist-'+s.id+'">'+distLabel+'</span></button>'+
+    '<button class="cardio-field" data-action="open-time" data-id="'+s.id+'"><span class="cf-label">Time</span><span class="cf-val" id="time-'+s.id+'">'+timeLabel+'</span></button>'+
+    '<div class="cardio-pace"><span class="cf-label">Pace</span><span class="cf-val" id="pace-'+s.id+'">'+pace+'</span></div>'+
+  '</div>';
+}
+
+function updateCardioRow(sid) {
+  var s=currentSession(sid); if(!s) return;
+  var v=cardioValues(s);
+  var de=document.getElementById("dist-"+sid); if(de) de.textContent=v.dist!=null?Number(v.dist).toFixed(1)+" km":"Set km";
+  var te=document.getElementById("time-"+sid); if(te) te.textContent=v.tsec!=null?fmtClock(v.tsec):"Set time";
+  var pe=document.getElementById("pace-"+sid); if(pe) pe.textContent=(v.dist>0&&v.tsec>0)?fmtPace(v.tsec/v.dist):"\u2014";
+}
+
+// ── Scroll-wheel picker ────────────────────────────────────────────────────────
+function wheelHtml(id, min, max, pad2) {
+  var items='<div class="pk-pad"></div>';
+  for(var v=min; v<=max; v++) items+='<div class="pk-item">'+(pad2?String(v).padStart(2,"0"):String(v))+'</div>';
+  items+='<div class="pk-pad"></div>';
+  return '<div class="pk-wheel" id="'+id+'" data-min="'+min+'" data-max="'+max+'">'+items+'</div>';
+}
+function setWheel(id, val) {
+  var w=document.getElementById(id); if(!w) return;
+  var min=parseInt(w.dataset.min);
+  w.scrollTop=(val-min)*PK_ITEM;
+}
+function wheelValue(id) {
+  var w=document.getElementById(id); if(!w) return 0;
+  var min=parseInt(w.dataset.min), max=parseInt(w.dataset.max);
+  var idx=Math.round(w.scrollTop/PK_ITEM);
+  idx=Math.max(0, Math.min(max-min, idx));
+  return min+idx;
+}
+function openPicker(sid, field) {
+  pickerCtx={ sid:sid, field:field };
+  var s=currentSession(sid), l=state.log[sid]||{};
+  var body=document.getElementById("picker-body"), title=document.getElementById("picker-title");
+  if(field==="dist") {
+    title.textContent="Distance";
+    var dist=(l.distanceKm!=null)?l.distanceKm:(s&&s.distanceKm!=null?s.distanceKm:0);
+    var whole=Math.floor(dist), dec=Math.round((dist-whole)*10); if(dec>9){whole++;dec=0;}
+    body.innerHTML=wheelHtml("pk-whole",0,60,false)+'<div class="pk-sep">.</div>'+wheelHtml("pk-dec",0,9,false)+'<div class="pk-unit">km</div>';
+    showPicker(); requestAnimationFrame(function(){ setWheel("pk-whole",whole); setWheel("pk-dec",dec); });
+  } else {
+    title.textContent="Time";
+    var tsec=(l.timeSec!=null)?l.timeSec:(s?parseClock(s.targetTime):null); if(tsec==null) tsec=0;
+    var mm=Math.floor(tsec/60), ss=tsec%60;
+    body.innerHTML=wheelHtml("pk-min",0,179,false)+'<div class="pk-sep">:</div>'+wheelHtml("pk-sec",0,59,true)+'<div class="pk-unit">min : sec</div>';
+    showPicker(); requestAnimationFrame(function(){ setWheel("pk-min",mm); setWheel("pk-sec",ss); });
+  }
+}
+function showPicker() { document.getElementById("picker-modal").classList.add("open"); }
+function closePicker() { document.getElementById("picker-modal").classList.remove("open"); pickerCtx=null; }
+function pickerDone() {
+  if(!pickerCtx) { closePicker(); return; }
+  var sid=pickerCtx.sid;
+  if(!state.log[sid]) state.log[sid]={done:false,felt:null,note:"",doneAt:null};
+  if(pickerCtx.field==="dist") state.log[sid].distanceKm=wheelValue("pk-whole")+wheelValue("pk-dec")/10;
+  else state.log[sid].timeSec=wheelValue("pk-min")*60+wheelValue("pk-sec");
+  updateCardioRow(sid); scheduleSave(); closePicker();
 }
 
 // ── DOM helpers ────────────────────────────────────────────────────────────────
@@ -453,10 +591,21 @@ function handleClick(e) {
   if(action==="toggle-lock") { state.locked=!state.locked; renderApp(); return; }
 
   // While viewing a locked past week, ignore anything that would edit it.
-  var EDIT={ "toggle-done":1,"toggle-exercise":1,"toggle-ex-note":1,"set-felt":1,"set-workload":1,"set-energy":1 };
+  var EDIT={ "toggle-done":1,"toggle-exercise":1,"toggle-ex-note":1,"set-felt":1,"set-workload":1,"set-energy":1,"open-dist":1,"open-time":1 };
   if(state.locked && EDIT[action]) return;
 
-  if(action==="signin") {
+  if(action==="rest-timer") {
+    var rsid=btn.dataset.id;
+    if(restTimers[rsid]) cancelRestTimer(rsid);
+    else startRestTimer(rsid, parseInt(btn.dataset.secs)||60);
+
+  } else if(action==="open-dist") {
+    openPicker(btn.dataset.id, "dist");
+
+  } else if(action==="open-time") {
+    openPicker(btn.dataset.id, "time");
+
+  } else if(action==="signin") {
     Auth.signIn().catch(function(){ /* popup closed or dismissed */ });
 
   } else if(action==="retry") {
@@ -562,6 +711,10 @@ function handlePlanFile(e) {
             base.exercises[String(i)]=existEx[String(i)]||{checked:false,weight:"",note:""};
           });
         }
+        if(s.cardio) {
+          if(base.distanceKm==null && s.distanceKm!=null) base.distanceKm=s.distanceKm;
+          if(base.timeSec==null && s.targetTime) base.timeSec=parseClock(s.targetTime);
+        }
         newLog[s.id]=base;
       });
       state.allWeeks[wk]={plan:plan,log:newLog,reflection:existingRef||{workload:null,energy:null,flags:""},updatedAt:new Date().toISOString()};
@@ -611,6 +764,17 @@ function buildSummary() {
         if(ex.note&&ex.note.trim()) line+=" | "+ex.note.trim();
         lines.push(line);
       });
+    }
+    if(s.cardio) {
+      var dist=(l.distanceKm!=null)?l.distanceKm:(s.distanceKm!=null?s.distanceKm:null);
+      var tsec=(l.timeSec!=null)?l.timeSec:parseClock(s.targetTime);
+      if(dist!=null||tsec!=null) {
+        var parts=[];
+        if(dist!=null) parts.push(Number(dist).toFixed(1)+" km");
+        if(tsec!=null) parts.push("in "+fmtClock(tsec));
+        if(dist>0&&tsec>0) parts.push("("+fmtPace(tsec/dist)+")");
+        lines.push("   cardio: "+parts.join(" "));
+      }
     }
     if(l.note&&l.note.trim()) lines.push("   note: "+l.note.trim());
   });
@@ -707,6 +871,11 @@ function boot() {
 
   // Help modal backdrop
   document.getElementById("help-modal").addEventListener("click", function(e){ if(e.target===document.getElementById("help-modal")) closeHelp(); });
+
+  // Scroll picker modal
+  document.getElementById("picker-cancel").addEventListener("click", closePicker);
+  document.getElementById("picker-done").addEventListener("click", pickerDone);
+  document.getElementById("picker-modal").addEventListener("click", function(e){ if(e.target===document.getElementById("picker-modal")) closePicker(); });
 
   // Stats panel (bar-chart button in the top bar)
   if (window.Stats) Stats.init();
